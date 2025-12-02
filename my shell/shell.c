@@ -2,27 +2,51 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
-void trimspace(char *str) {
-    // Remove leading spaces
-    char *start = str;
-    while (isspace((unsigned char)*start)) start++;
+#define MAX_ARGS 20
 
-    if (start != str) {
-        memmove(str, start, strlen(start) + 1); 
+// parsing user input into command and arguments
+void parse(char *cmd, char **args)
+    {
+        int i = 0;
+        char * temp = strtok(cmd," ");
+        while (temp && i < MAX_ARGS -1)
+        {
+            args[i++] = temp;
+            temp = strtok(NULL, " ");
+        }
+        args[i] = NULL;
     }
 
-    // Remove trailing spaces
-    char *end = str + strlen(str) - 1;
-    while (end >= str && isspace((unsigned char)*end)) {
-        *end = '\0';
-        end--;
+//triming spaces
+void trimspace(char *str) 
+    {
+        // Remove leading spaces
+        char *start = str;
+        while (isspace((unsigned char)*start)) start++;
+
+        if (start != str) {
+            memmove(str, start, strlen(start) + 1); 
+        }
+
+        // Remove trailing spaces
+        char *end = str + strlen(str) - 1;
+        while (end >= str && isspace((unsigned char)*end)) {
+            *end = '\0';
+            end--;
+        }
     }
-}
 
 int main()
     {
+        char*  pwd  = getenv("PWD");
+        setenv("PATH", pwd , 1);
 
+        char command[100];
+        char *args[MAX_ARGS];
+        
         while (true)
             {
                 char * user = getenv("USER");
@@ -35,7 +59,6 @@ int main()
                 sprintf(consoleinfo,"[%s # %s] >",user,workdir);
                 printf("%s",consoleinfo);
 
-                char command[100];
                 fgets(command, sizeof(command), stdin);
 
                 // checking for exit
@@ -45,7 +68,20 @@ int main()
                     {
                         break;
                     }
-
+                
+                //executing commands
+                parse(command, args);
+                pid_t pid = fork();
+                if (pid == 0) 
+                    {
+                        execvp(args[0], args);
+                        perror("execvp failed");
+                        exit(1);
+                    } else 
+                        {
+                            wait(NULL);
+                        }
+                
                 free(consoleinfo);
             }
 
