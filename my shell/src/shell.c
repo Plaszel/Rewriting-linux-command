@@ -45,7 +45,9 @@ void trimspace(char *str)
 
 int main()
 {
-    char *pwd = getenv("PWD");
+    char pwd[255];
+    readlink("/proc/self/exe",pwd,sizeof(pwd));
+    pwd[strlen(pwd) - 6] = '\0';
     setenv("PATH", pwd, 1);
 
     char command[100];
@@ -72,8 +74,13 @@ int main()
         parseargument(command, args, &args_count);
 
         // exit shell
+
+        char *path;
+
         if (!strcmp(args[0], "exit"))
         {
+            path = getenv("PATH");
+            chdir(path);
             free(consoleinfo);
             break;
         }
@@ -82,15 +89,13 @@ int main()
 
         if (!strcmp(args[0], "cd"))
         {
-            char *path;
-
             if (args_count > 2)
             {
                 printf("Too many arguments give\n");
             }
             else
             {
-                path =  (args_count > 1) ? args[1] : getenv("HOME");
+                path = (args_count > 1) ? args[1] : getenv("HOME");
                 if (chdir(path))
                 {
                     perror("cd");
@@ -101,11 +106,10 @@ int main()
 
         // executing external commands
         pid_t pid = fork();
-        if (pid == 0)
+        if (!pid)
         {
             execvp(args[0], args);
-            perror("command failed");
-            exit(1);
+            printf("Unknown command\n");
         }
         else
         {
