@@ -1,16 +1,29 @@
 
-#include <stdio.h>
-#include <dirent.h>
+    #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
+#include <math.h>
 
-void main(){
-    int i = 3;
-    char * znaki[] = {"ls","a","-b"};
-    char * args;
-    args = znaki[2] + 1;
-    //memmove(znaki[2],znaki[2] + 1,strlen(znaki[2]));
-    printf("%s\n",args);
+//dynamic memory appending for strings
+void append(char ** str,char * add)
+{
+    int old_len = *str ? strlen(*str) : 0;
+    int add_len = strlen(add);
+    
+    char *newptr = realloc(*str,old_len + add_len + 1);
+    if (!newptr) exit(1);
 
+    memcpy(newptr + old_len, add, add_len + 1);
+    *str = newptr;
 }
+
+int main() {
+   
+    struct stat filestat;
+   printf("%d", stat "test");
+}
+

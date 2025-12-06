@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #define MAX_ARGS 20
 
@@ -65,12 +66,22 @@ int main()
         // basic console output and reading user input
         sprintf(consoleinfo, "[%s # %s] >", user, workdir);
         printf("%s", consoleinfo);
+        fflush(stdout);
 
+        //user input
         fgets(command, sizeof(command), stdin);
 
         // triming user input from \n spaces and parsing args
         command[strcspn(command, "\n")] = 0;
         trimspace(command);
+        
+        if (!strcmp(command,""))
+        {
+        free(workdir);
+        free(consoleinfo);
+        continue;
+        }
+
         parseargument(command, args, &args_count);
 
         // exit shell
@@ -81,6 +92,7 @@ int main()
         {
             path = getenv("PATH");
             chdir(path);
+            free(workdir);
             free(consoleinfo);
             break;
         }
