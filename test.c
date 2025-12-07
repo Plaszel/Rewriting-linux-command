@@ -1,29 +1,51 @@
-
-    #include <stdio.h>
-#include <stdlib.h>
+#include <termios.h>
 #include <unistd.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <stdlib.h>
+#include <stdio.h>
 
-#include <math.h>
+struct termios orig_termios;
 
-//dynamic memory appending for strings
-void append(char ** str,char * add)
-{
-    int old_len = *str ? strlen(*str) : 0;
-    int add_len = strlen(add);
-    
-    char *newptr = realloc(*str,old_len + add_len + 1);
-    if (!newptr) exit(1);
+void disableRawMode() {
+    tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);
+    write(STDOUT_FILENO, "\x1b[?25h", 6); // show cursor
+}
 
-    memcpy(newptr + old_len, add, add_len + 1);
-    *str = newptr;
+void enableRawMode() {
+    tcgetattr(STDIN_FILENO, &orig_termios);
+    atexit(disableRawMode);
+
+    struct termios raw = orig_termios;
+    raw.c_lflag &= ~(ICANON | ECHO);
+    raw.c_iflag &= ~(IXON | ICRNL);
+    raw.c_oflag &= ~(OPOST);
+    tcsetattr(STDIN_FILENO, TCSANOW, &raw);
+}
+
+void editorDrawRows() {
+    for (int i = 0; i < 24; i++) {
+        write(STDOUT_FILENO, "~\r\n", 3);
+    }
+}
+
+void editorRefreshScreen() {
+    write(STDOUT_FILENO, "\x1b[?25l", 6);  // hide cursor
+    write(STDOUT_FILENO, "\x1b[2J", 4);    // clear screen
+    write(STDOUT_FILENO, "\x1b[H", 3);     // cursor to home
+
+    editorDrawRows();
+
+    write(STDOUT_FILENO, "\x1b[H", 3);     // move cursor again
+    write(STDOUT_FILENO, "\x1b[?25h", 6);  // show cursor
 }
 
 int main() {
-   
-    struct stat filestat;
-   printf("%d", stat "test");
-}
+    enableRawMode();
 
+    while (1) {
+        editorRefreshScreen();
+        
+        char c;
+        read(STDIN_FILENO, &c, 1);
+        if (c == 'q') break;
+    }
+}
