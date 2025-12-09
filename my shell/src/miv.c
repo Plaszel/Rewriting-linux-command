@@ -31,6 +31,55 @@ void appendChar( struct output * temp, char toadd)
     temp->text[temp->lenght] = '\0';
 }
 
+//removing char at position
+void removeChar(struct output * str,struct cursor * cur,int pos)
+{   
+        if (cur->x == 1 && cur->y == 1)
+        {
+            return;
+        }
+        if (cur->x == 1)
+        {
+            cur->y--;
+            if ( cur->y == 1)
+            {
+                cur->x = str->lenght;
+            }
+        }else{
+            cur->x--;
+        }
+        memmove(&str->text[pos],&str->text[pos+1],str->lenght - pos);        
+        str->lenght--;
+        str->text = realloc(str->text,str->lenght + 1);
+        str->text[str->lenght] = '\0';
+}
+
+//get cursor position (lenght)
+int get_cursor_position(struct output * str,struct cursor * cur)
+{
+    if (!str->text || str->lenght == 0) return 0;
+
+    int row = 1;
+    int col = 1;
+    int i = 0;
+
+    while (i < str->lenght)
+    {
+        if (row == cur->y && col == cur->x)
+            return i;
+        if (str->text[i] == '\n')
+        {
+            row++;
+            col = 1;
+        }else{
+            col++;
+        }
+        
+        i++;
+        return str->lenght;
+    }
+}
+
 // moving cursor to position and updating its position variable
 void move_cursor(struct cursor * temp, int x , int y)
 {
@@ -42,8 +91,7 @@ void move_cursor(struct cursor * temp, int x , int y)
     free(str);
     temp->x += x;
     temp->y += y;
-};
-
+}
 
 
 
@@ -92,10 +140,19 @@ void main()
         }
         if ( c == 10)
         {
-            move_cursor(&pos,(-pos.x),1);
             appendChar(&out,'\n');
+            appendChar(&out,'\r');
+            pos.x = 1;
+            pos.y++;
             continue;
         }
+        if ( c == 8 || c == 127)
+        {
+            removeChar(&out,&pos,get_cursor_position(&out,&pos));
+            continue;
+        }
+        
+
         appendChar(&out,c);
         move_cursor(&pos,1,0);
         
