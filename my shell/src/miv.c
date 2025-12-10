@@ -44,10 +44,18 @@ void removeChar(struct output * str,struct cursor * cur,int pos)
             if ( cur->y == 1)
             {
                 cur->x = str->lenght;
+            }else{
+                int i = 1;
+                while( str->lenght > 0 && str->text[pos-1-i] != '\n')
+                {
+                    i++;
+                }
+                cur->x = i;
             }
         }else{
             cur->x--;
         }
+
         memmove(&str->text[pos],&str->text[pos+1],str->lenght - pos);        
         str->lenght--;
         str->text = realloc(str->text,str->lenght + 1);
@@ -101,8 +109,8 @@ void disable_termosik()
     struct termios termosik_nowy;
     tcgetattr(STDIN_FILENO,&termosik_stary);
     termosik_nowy = termosik_stary;
-    termosik_nowy.c_lflag &= ~(ICANON | ECHO);
-    termosik_nowy.c_iflag &= ~(IXON);
+    termosik_nowy.c_lflag &= ~(ICANON | ECHO | ISIG);
+    termosik_nowy.c_iflag &= ~(IXON | ICRNL);
     termosik_nowy.c_oflag &= ~(OPOST);
 
     write(STDOUT_FILENO,"\x1b[?25h",strlen("\x1b[?25h"));
@@ -127,8 +135,9 @@ void main()
     while (true)
     {   
         //clear terminal -> show cursor -> got to home pos -> display buffered text -> if valid input add char to buffer
-        write(STDOUT_FILENO,"\x1b[2J",strlen("\x1b[2J"));
-        write(STDOUT_FILENO,"\x1b[1;1H",strlen("\x1b[1;1H"));
+
+        write(STDOUT_FILENO,"\x1b[2J",4);
+        write(STDOUT_FILENO,"\x1b[1;1H",6);
         write(STDOUT_FILENO,out.text,out.lenght);
         move_cursor(&pos,0,0);
         
@@ -138,10 +147,10 @@ void main()
             write(STDOUT_FILENO,"\x1b[2J",strlen("\x1b[2J")); 
             break;
         }
-        if ( c == 10)
+        if ( c == '\r' )
         {
+            appendChar(&out,c);
             appendChar(&out,'\n');
-            appendChar(&out,'\r');
             pos.x = 1;
             pos.y++;
             continue;
@@ -149,6 +158,10 @@ void main()
         if ( c == 8 || c == 127)
         {
             removeChar(&out,&pos,get_cursor_position(&out,&pos));
+            if(out.text[get_cursor_position(&out,&pos)-1] == '\r')
+            {
+                removeChar(&out,&pos,get_cursor_position(&out,&pos));
+            }
             continue;
         }
         
