@@ -20,6 +20,22 @@ struct cursor
     int y;
 };
 
+//read key input 
+char readKey(){
+    char input[3];
+    read(STDIN_FILENO, &input, 3); 
+    if(input[0] == 27)
+    {
+        if (input[1] == 91)
+        {  
+            return input[2];
+        }
+        
+    }else{
+        return input[0];
+    }
+}
+
 // adding single char to output
 void appendChar( struct output * temp, char toadd)
 {
@@ -75,7 +91,7 @@ int get_cursor_position(struct output * str,struct cursor * cur)
     {
         if (row == cur->y && col == cur->x)
             return i;
-        if (str->text[i] == '\n')
+        if (str->text[i] == '\r')
         {
             row++;
             col = 1;
@@ -84,7 +100,29 @@ int get_cursor_position(struct output * str,struct cursor * cur)
         }
         
         i++;
-        return str->lenght;
+    }
+}
+
+//find end of line in which cursor is located
+int get_end_of_line(struct output * str,struct cursor * cur)
+{
+    int i = 0;
+    int numb_of_r = 1;
+    int col = 1;
+    while(i<str->lenght)
+    {
+        if (str->text[i] == '\r')
+        {
+            if (numb_of_r == cur->y)
+            {                     
+                return col;
+            }else{
+                numb_of_r++;
+                col = 1;
+            }
+        }
+        col++;
+        i++;
     }
 }
 
@@ -140,8 +178,8 @@ void main()
         write(STDOUT_FILENO,"\x1b[1;1H",6);
         write(STDOUT_FILENO,out.text,out.lenght);
         move_cursor(&pos,0,0);
-        
-        read(STDIN_FILENO, &c, 1); 
+          
+        char c = readKey();
 
         // ctrl-s - exit
         if ( c == 19) 
@@ -167,6 +205,20 @@ void main()
                 removeChar(&out,&pos,get_cursor_position(&out,&pos));
             }
             continue;
+        }
+        // arrow handeling
+        switch (c)
+        {
+        case 65: 
+            pos.y--;
+            pos.x = get_cursor_position(&out,&pos);
+            continue; 
+            break;
+        case 66: pos.y++; continue; break;
+        case 67: pos.x++; continue; break;
+        case 68: pos.x--; continue; break;
+        
+        default: break;
         }
         
         //adding char and moving cursor x + 1
