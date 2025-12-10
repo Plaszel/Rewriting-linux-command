@@ -134,7 +134,7 @@ void main()
 
     while (true)
     {   
-        //clear terminal -> show cursor -> got to home pos -> display buffered text -> if valid input add char to buffer
+        //clear terminal-> got to home pos -> display buffered text -> if valid input add char to buffer
 
         write(STDOUT_FILENO,"\x1b[2J",4);
         write(STDOUT_FILENO,"\x1b[1;1H",6);
@@ -142,11 +142,14 @@ void main()
         move_cursor(&pos,0,0);
         
         read(STDIN_FILENO, &c, 1); 
+
+        // ctrl-s - exit
         if ( c == 19) 
         {
             write(STDOUT_FILENO,"\x1b[2J",strlen("\x1b[2J")); 
             break;
         }
+        // enter - new line
         if ( c == '\r' )
         {
             appendChar(&out,c);
@@ -155,6 +158,7 @@ void main()
             pos.y++;
             continue;
         }
+        //backspace - removing character at position of cursor
         if ( c == 8 || c == 127)
         {
             removeChar(&out,&pos,get_cursor_position(&out,&pos));
@@ -165,7 +169,7 @@ void main()
             continue;
         }
         
-
+        //adding char and moving cursor x + 1
         appendChar(&out,c);
         move_cursor(&pos,1,0);
         
