@@ -174,6 +174,8 @@ void main()
         move_cursor(&pos,1,0);
         
     }
+    write(STDOUT_FILENO,"\x1b[2J",4);
+    write(STDOUT_FILENO,"\x1b[1;1H",6);
     FILE * f = fopen("test.txt","w");
     fprintf(f,out.text);
     fclose(f);
