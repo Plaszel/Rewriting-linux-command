@@ -26,6 +26,25 @@ struct cursor
     int y;
 };
 
+char readKey();
+
+void appendChar(struct output * temp,char toadd, int pos);
+
+void removeChar(struct output * str,struct cursor * cur,int pos);
+
+int get_cursor_position(struct output * str,struct cursor * cur);
+
+int get_max_rows(struct output *str);
+
+int get_end_of_line(struct output * str,struct cursor * cur);
+
+void move_cursor(struct cursor * temp, int x, int y);
+
+void disable_termosik();
+
+void enable_termosik();
+
+
 //read key input 
 char readKey(){
     char input[3];
@@ -43,14 +62,21 @@ char readKey(){
 }
 
 // adding single char to output
-void appendChar( struct output * temp, char toadd)
+void appendChar( struct output * temp,char toadd, int pos)
 {
-    char * buff = realloc(temp->text,temp->lenght + 2);
-    if (!buff) return;
-    temp->text = buff;
-    temp->text[temp->lenght] = toadd;
-    temp->lenght++;
-    temp->text[temp->lenght] = '\0';
+        char * buff = realloc(temp->text,temp->lenght + 2);
+        if (!buff) return;
+        temp->text = buff;
+        memmove(&temp->text[pos+1],&temp->text[pos],temp->lenght - pos);
+        temp->text[pos] = toadd;
+        temp->lenght++;
+        if (toadd == '\r')
+        {
+            temp->lenght++;
+            memmove(&temp->text[pos+1],&temp->text[pos],temp->lenght - pos);
+            temp->text[pos+1] = '\n';
+        }
+        temp->text[temp->lenght] = '\0';
 }
 
 //removing char at position
@@ -89,7 +115,7 @@ void removeChar(struct output * str,struct cursor * cur,int pos)
 //get cursor position (lenght)
 int get_cursor_position(struct output * str,struct cursor * cur)
 {
-    if (!str->text || str->lenght == 0) return 1;
+    if (!str->text || str->lenght == 0) return 0;
 
     int row = 1;
     int col = 1;
@@ -191,14 +217,56 @@ void enable_termosik()
     tcsetattr(STDIN_FILENO,TCSANOW,&termosik_stary);
 }
 
-void main()
+void saveFile(char * file, struct output * out)
 {
+
+    write(STDOUT_FILENO,"\x1b[2J",4);
+    write(STDOUT_FILENO,"\x1b[1;1H",6);
+
+    enable_termosik();
+
+    if (file == NULL){
+        file = malloc(64);
+        printf("Filename to save to:");
+        fflush(stdout);
+        fgets(file, 64,stdin);
+        file[strlen(file)-1] = '\0';
+    }
+
+    FILE * f = fopen(file,"w");
+    fprintf(f,out->text);
+
+    fclose(f);
+
+    disable_termosik();
+}
+
+
+void main(int argc, char *argv[])
+{
+    
     char c;
     int temp_int = 0;
     struct output out = {NULL,0};
     struct cursor pos = {1,1};
     char * mouse_pos = NULL;
-        
+    char * file;
+    char char_temp;
+    bool saved;
+
+    if (argc > 1){
+        if(argv[1][0] != '-')
+        {
+            file = argv[1];
+        }else{
+            printf("Wrong argument given");
+            exit(1);
+        }
+    }else{
+        file = NULL;
+    }
+
+    
     disable_termosik();
 
     while (true)
@@ -212,17 +280,52 @@ void main()
           
         char c = readKey();
 
-        // ctrl-s - exit
+        //ctrl-q -exit
+        if (c == 17)
+        {
+            write(STDOUT_FILENO,"\x1b[2J",4);
+            write(STDOUT_FILENO,"\x1b[1;1H",6);
+
+            if (saved)
+            {
+                free(out.text);
+                enable_termosik();
+                exit(0);
+            }else{
+                write(STDOUT_FILENO,"Save before leaving? (Y/N):",28);
+                char_temp = readKey();
+                bool anwser = (char_temp == 'N' || char_temp == 'n' ) ? false : true;
+                if (anwser){
+                    
+                    saveFile(file,&out);
+                    free(out.text);
+                    exit(0);
+                }
+                disable_termosik();
+                
+                    write(STDOUT_FILENO,"\x1b[2J",4);
+                    write(STDOUT_FILENO,"\x1b[1;1H",6);
+
+                enable_termosik();
+
+                free(out.text);
+                exit(0);
+            }
+            
+
+        }
+        // ctrl-s - save
         if ( c == 19) 
         {
-            write(STDOUT_FILENO,"\x1b[2J",strlen("\x1b[2J")); 
-            break;
+            saveFile(file,&out);
+            saved = true;
+            continue;
         }
+        saved = false;
         // enter - new line
         if ( c == '\r' )
         {
-            appendChar(&out,c);
-            appendChar(&out,'\n');
+            appendChar(&out,c,get_cursor_position(&out,&pos));
             pos.x = 1;
             pos.y++;
             continue;
@@ -240,6 +343,7 @@ void main()
         // arrow handeling
         switch (c)
         {
+        // up
         case 65:
             if (pos.y > 1)
             {
@@ -247,8 +351,8 @@ void main()
                 temp_int = get_end_of_line(&out,&pos);
                 pos.x = (pos.x < temp_int) ? pos.x : temp_int;
             }
-            continue; 
-            break;  
+            continue;  
+        // down
         case 66: 
             pos.y++;
             temp_int = get_cursor_position(&out,&pos);
@@ -265,31 +369,31 @@ void main()
                 pos.x = get_end_of_line(&out,&pos);
             }
             continue; 
-            break;
+        //right
         case 67: 
             temp_int = get_cursor_position(&out,&pos);
             pos.x = (out.text[temp_int] != '\r' && temp_int < out.lenght) ? pos.x + 1 : pos.x; 
             continue; 
-            break;
+        // left
         case 68: 
             pos.x = (pos.x >1) ? pos.x - 1 : pos.x; 
             continue; 
-            break;
         
         default: break;
         }
         
         //adding char and moving cursor x + 1
-        appendChar(&out,c);
+        appendChar(&out,c,get_cursor_position(&out,&pos));
         move_cursor(&pos,1,0);
         
     }
     write(STDOUT_FILENO,"\x1b[2J",4);
     write(STDOUT_FILENO,"\x1b[1;1H",6);
-    FILE * f = fopen("test.txt","w");
-    fprintf(f,out.text);
-    fclose(f);
-    free(out.text);
+
     enable_termosik();
+
+
+    free(out.text);
+    free(file); 
 
 }
