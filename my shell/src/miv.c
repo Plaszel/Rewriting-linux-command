@@ -54,12 +54,14 @@ void removeChar(struct output * str,struct cursor * cur,int pos)
         {
             return;
         }
+
+        
         if (cur->x == 1)
         {
             cur->y--;
             if ( cur->y == 1)
             {
-                cur->x = str->lenght;
+                cur->x = pos;
             }else{
                 int i = 1;
                 while( str->lenght > 0 && str->text[pos-1-i] != '\n')
@@ -71,7 +73,7 @@ void removeChar(struct output * str,struct cursor * cur,int pos)
         }else{
             cur->x--;
         }
-
+        
         memmove(&str->text[pos],&str->text[pos+1],str->lenght - pos);        
         str->lenght--;
         str->text = realloc(str->text,str->lenght + 1);
@@ -90,7 +92,7 @@ int get_cursor_position(struct output * str,struct cursor * cur)
     while (i < str->lenght)
     {
         if (row == cur->y && col == cur->x)
-            return i;
+            return ++i;
         if (str->text[i] == '\r')
         {
             row++;
@@ -108,17 +110,20 @@ int get_end_of_line(struct output * str,struct cursor * cur)
 {
     int i = 0;
     int numb_of_r = 1;
-    int col = 1;
+    int col = 0;
+    
     while(i<str->lenght)
     {
         if (str->text[i] == '\r')
         {
+            if (cur->y == 1)
+                return ++i;
             if (numb_of_r == cur->y)
             {                     
-                return col;
+                return --col;
             }else{
                 numb_of_r++;
-                col = 1;
+                col = 0;
             }
         }
         col++;
@@ -127,16 +132,16 @@ int get_end_of_line(struct output * str,struct cursor * cur)
 }
 
 // moving cursor to position and updating its position variable
-void move_cursor(struct cursor * temp, int x , int y)
+void move_cursor(struct cursor * temp, int x, int y)
 {
-    int len = snprintf(NULL,0,"\x1b[%d;%dH", (temp->y + y), (temp->x + x));
+    temp->x += x;
+    temp->y += y;
+    int len = snprintf(NULL,0,"\x1b[%d;%dH", temp->y , temp->x);
     char * str = malloc(len + 1);
-    sprintf(str,"\x1b[%d;%dH", (temp->y + y), (temp->x + x));
+    sprintf(str,"\x1b[%d;%dH", temp->y, temp->x);
 
     write(STDOUT_FILENO,str,strlen(str));
     free(str);
-    temp->x += x;
-    temp->y += y;
 }
 
 
@@ -211,7 +216,7 @@ void main()
         {
         case 65: 
             pos.y--;
-            pos.x = get_cursor_position(&out,&pos);
+            pos.x = get_end_of_line(&out,&pos);
             continue; 
             break;
         case 66: pos.y++; continue; break;
