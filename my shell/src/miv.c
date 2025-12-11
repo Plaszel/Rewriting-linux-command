@@ -5,6 +5,12 @@
 #include <string.h>
 #include <stdbool.h>
 
+/*
+TODO 
+-fix inserting chr inside string
+*/
+
+
 
 struct termios termosik_stary;
 
@@ -83,7 +89,7 @@ void removeChar(struct output * str,struct cursor * cur,int pos)
 //get cursor position (lenght)
 int get_cursor_position(struct output * str,struct cursor * cur)
 {
-    if (!str->text || str->lenght == 0) return 0;
+    if (!str->text || str->lenght == 0) return 1;
 
     int row = 1;
     int col = 1;
@@ -91,6 +97,8 @@ int get_cursor_position(struct output * str,struct cursor * cur)
 
     while (i < str->lenght)
     {
+        if (cur->y == 1 && col == cur->x)
+            return i;
         if (row == cur->y && col == cur->x)
             return ++i;
         if (str->text[i] == '\r')
@@ -103,6 +111,19 @@ int get_cursor_position(struct output * str,struct cursor * cur)
         
         i++;
     }
+}
+
+//gets numb of rows
+int get_max_rows(struct output *str)
+{
+    if (!str || !str->text) return 1;
+
+    int rows = 1;
+    for (int i = 0; i < str->lenght; i++)
+        if (str->text[i] == '\r')
+            rows++;
+
+    return rows;
 }
 
 //find end of line in which cursor is located
@@ -128,6 +149,10 @@ int get_end_of_line(struct output * str,struct cursor * cur)
         }
         col++;
         i++;
+        if (i == str->lenght)
+        {
+            return --col;
+        }
     }
 }
 
@@ -169,6 +194,7 @@ void enable_termosik()
 void main()
 {
     char c;
+    int temp_int = 0;
     struct output out = {NULL,0};
     struct cursor pos = {1,1};
     char * mouse_pos = NULL;
@@ -214,14 +240,41 @@ void main()
         // arrow handeling
         switch (c)
         {
-        case 65: 
-            pos.y--;
-            pos.x = get_end_of_line(&out,&pos);
+        case 65:
+            if (pos.y > 1)
+            {
+                pos.y--;
+                temp_int = get_end_of_line(&out,&pos);
+                pos.x = (pos.x < temp_int) ? pos.x : temp_int;
+            }
+            continue; 
+            break;  
+        case 66: 
+            pos.y++;
+            temp_int = get_cursor_position(&out,&pos);
+            if (get_max_rows(&out) < pos.y )
+                {
+                    pos.y--;
+                    continue;
+                }
+
+            if ( temp_int < out.lenght)
+            {
+                pos.x = (pos.x < temp_int) ? pos.x : get_end_of_line(&out,&pos);
+            }else{
+                pos.x = get_end_of_line(&out,&pos);
+            }
             continue; 
             break;
-        case 66: pos.y++; continue; break;
-        case 67: pos.x++; continue; break;
-        case 68: pos.x--; continue; break;
+        case 67: 
+            temp_int = get_cursor_position(&out,&pos);
+            pos.x = (out.text[temp_int] != '\r' && temp_int < out.lenght) ? pos.x + 1 : pos.x; 
+            continue; 
+            break;
+        case 68: 
+            pos.x = (pos.x >1) ? pos.x - 1 : pos.x; 
+            continue; 
+            break;
         
         default: break;
         }
