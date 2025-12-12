@@ -214,6 +214,4 @@ int main(int argc, char *argv[])
         
     }
     free(paths);
-
-    return 0;
 }
