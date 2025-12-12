@@ -5,12 +5,6 @@
 #include <string.h>
 #include <stdbool.h>
 
-/*
-TODO 
--fix inserting chr inside string
-*/
-
-
 
 struct termios termosik_stary;
 
@@ -217,7 +211,8 @@ void enable_termosik()
     tcsetattr(STDIN_FILENO,TCSANOW,&termosik_stary);
 }
 
-void saveFile(char * file, struct output * out)
+//save file
+void saveFile(char ** file, struct output * out)
 {
 
     write(STDOUT_FILENO,"\x1b[2J",4);
@@ -225,15 +220,20 @@ void saveFile(char * file, struct output * out)
 
     enable_termosik();
 
-    if (file == NULL){
-        file = malloc(64);
+    while (*file == NULL || (*file)[0] == '\n'){
+        if (*file == NULL)
+            *file = malloc(64);
+
         printf("Filename to save to:");
         fflush(stdout);
-        fgets(file, 64,stdin);
-        file[strlen(file)-1] = '\0';
+        fgets(*file, 64,stdin);
+        if (*file[0] == '\n')
+            continue;
+        (*file)[strlen(*file)-1] = '\0';
     }
+    
 
-    FILE * f = fopen(file,"w");
+    FILE * f = fopen(*file,"w");
     fprintf(f,out->text);
 
     fclose(f);
@@ -252,12 +252,27 @@ void main(int argc, char *argv[])
     char * mouse_pos = NULL;
     char * file;
     char char_temp;
+    char * string_temp;
     bool saved;
 
     if (argc > 1){
         if(argv[1][0] != '-')
         {
             file = argv[1];
+            FILE * f = fopen(file,"r");
+            string_temp = malloc(256);
+            out.text = malloc(1);
+            out.text[0] = '\0';
+            while (fgets(string_temp,256,f) != NULL)
+            {
+                out.lenght += strlen(string_temp);
+                out.text = realloc(out.text,out.lenght + 1);
+                strcat(out.text,string_temp);
+                out.text[out.lenght] = '\0';
+            }
+            
+            free(string_temp);
+            fclose(f);
         }else{
             printf("Wrong argument given");
             exit(1);
@@ -297,11 +312,11 @@ void main(int argc, char *argv[])
                 bool anwser = (char_temp == 'N' || char_temp == 'n' ) ? false : true;
                 if (anwser){
                     
-                    saveFile(file,&out);
+                    saveFile(&file,&out);
                     free(out.text);
+                    enable_termosik();
                     exit(0);
                 }
-                disable_termosik();
                 
                     write(STDOUT_FILENO,"\x1b[2J",4);
                     write(STDOUT_FILENO,"\x1b[1;1H",6);
@@ -317,7 +332,7 @@ void main(int argc, char *argv[])
         // ctrl-s - save
         if ( c == 19) 
         {
-            saveFile(file,&out);
+            saveFile(&file,&out);
             saved = true;
             continue;
         }
@@ -394,6 +409,5 @@ void main(int argc, char *argv[])
 
 
     free(out.text);
-    free(file); 
 
 }
