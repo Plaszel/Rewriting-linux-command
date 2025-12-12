@@ -265,10 +265,19 @@ void main(int argc, char *argv[])
             out.text[0] = '\0';
             while (fgets(string_temp,256,f) != NULL)
             {
-                out.lenght += strlen(string_temp);
-                out.text = realloc(out.text,out.lenght + 1);
+                out.lenght += strlen(string_temp) + 1;
+                out.text = realloc(out.text,out.lenght + 2);
                 strcat(out.text,string_temp);
-                out.text[out.lenght] = '\0';
+                if (out.text[out.lenght-2] == '\n')
+                {
+                    out.text[out.lenght-2] = '\r';
+                    out.text[out.lenght-1] = '\n';
+                    out.text[out.lenght] = '\0';
+                }else{
+                    out.lenght--;
+                    out.text[out.lenght] = '\0';
+                }
+
             }
             
             free(string_temp);
