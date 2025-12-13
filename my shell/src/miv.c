@@ -20,7 +20,18 @@ struct cursor
     int y;
 };
 
-char readKey();
+enum Special_keys {
+    KEY_ARROW_UP = 1001,
+    KEY_ARROW_DOWN = 1002,
+    KEY_ARROW_RIGHT = 1003,
+    KEY_ARROW_LEFT = 1004,
+    KEY_HOME = 1005,
+    KEY_END = 1006,
+    KEY_PG_UP = 1007,
+    KEY_PG_DOWN = 1008,
+};
+
+int readKey();
 
 void appendChar(struct output * temp,char toadd, int pos);
 
@@ -40,19 +51,47 @@ void enable_termosik();
 
 
 //read key input 
-char readKey(){
-    char input[3];
-    read(STDIN_FILENO, &input, 3); 
-    if(input[0] == 27)
+int readKey(){
+    char input[4];
+    read(STDIN_FILENO, &input, 4); 
+    if(input[0] == 27 )
     {
         if (input[1] == 91)
-        {  
-            return input[2];
-        }
+        {
+            switch (input[2])
+            {
+            case 'A':
+                return KEY_ARROW_UP;    
+            
+            case 'B':
+                return KEY_ARROW_DOWN;
+
+            case 'C':
+                return KEY_ARROW_RIGHT;    
+            
+            case 'D':
+                return KEY_ARROW_LEFT;
+                
+            case 'H':
+                return KEY_HOME;
+
+            case 'F':
+                return KEY_END;
+            
+            case '5':
+                return KEY_PG_UP;
+
+            case '6':
+                return KEY_PG_DOWN;
+                           
+            default:
+                break;
+            } 
+        }   
         
     }else{
         return input[0];
-    }
+    }   
 }
 
 // adding single char to output
@@ -302,7 +341,7 @@ void main(int argc, char *argv[])
         write(STDOUT_FILENO,out.text,out.lenght);
         move_cursor(&pos,0,0);
           
-        char c = readKey();
+        int c = readKey();
 
         //ctrl-q -exit
         if (c == 17)
@@ -368,7 +407,7 @@ void main(int argc, char *argv[])
         switch (c)
         {
         // up
-        case 65:
+        case KEY_ARROW_UP:
             if (pos.y > 1)
             {
                 pos.y--;
@@ -377,7 +416,7 @@ void main(int argc, char *argv[])
             }
             continue;  
         // down
-        case 66: 
+        case KEY_ARROW_DOWN: 
             pos.y++;
             temp_int = get_cursor_position(&out,&pos);
             if (get_max_rows(&out) < pos.y )
@@ -394,17 +433,63 @@ void main(int argc, char *argv[])
             }
             continue; 
         //right
-        case 67: 
+        case KEY_ARROW_RIGHT: 
             temp_int = get_cursor_position(&out,&pos);
             pos.x = (out.text[temp_int] != '\r' && temp_int < out.lenght) ? pos.x + 1 : pos.x; 
             continue; 
         // left
-        case 68: 
+        case KEY_ARROW_LEFT: 
             pos.x = (pos.x >1) ? pos.x - 1 : pos.x; 
             continue; 
         
         default: break;
         }
+
+        // HOME END PG UP PG DOWN
+        switch (c)
+        {
+        //home
+        case KEY_HOME:
+            pos.x = 1;
+            continue;
+        //end
+        case KEY_END:
+            pos.x = get_end_of_line(&out,&pos);
+            continue;
+
+        case KEY_PG_UP:
+            for(int i = 0;i < 50;i++)
+            {
+                if (!(pos.y > 1))
+                    break;
+                pos.y--;
+            }
+            temp_int = get_end_of_line(&out,&pos);
+            pos.x = (pos.x < temp_int) ? pos.x : temp_int;
+            continue;
+            
+        case KEY_PG_DOWN:
+            temp_int = get_max_rows(&out);
+            for(int i = 0;i < 50;i++)
+            {
+                if (!(pos.y < temp_int))
+                    break;
+                pos.y++;
+            }
+            temp_int = get_cursor_position(&out,&pos);
+            if ( temp_int < out.lenght)
+            {
+                pos.x = (pos.x < temp_int) ? pos.x : get_end_of_line(&out,&pos);
+            }else{
+                pos.x = get_end_of_line(&out,&pos);
+            }
+
+            continue;
+
+        default:
+            break;
+        }
+        
         
         //adding char and moving cursor x + 1
         appendChar(&out,c,get_cursor_position(&out,&pos));
