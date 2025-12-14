@@ -293,20 +293,19 @@ void readFile(char **file, char *filename, struct output *out)
     out->text[0] = '\0';
     while (fgets(string_temp, 256, f) != NULL)
     {
-        out->lenght += strlen(string_temp) + 1;
-        out->text = realloc(out->text, out->lenght + 2);
-        strcat(out->text, string_temp);
-        if (out->text[out->lenght - 2] == '\n')
+        out->lenght += strlen(string_temp);
+        out->text = realloc(out->text, out->lenght + 1);
+        
+        if (string_temp[strlen(string_temp)] == '\n' )
         {
-            out->text[out->lenght - 2] = '\r';
-            out->text[out->lenght - 1] = '\n';
-            out->text[out->lenght] = '\0';
+            string_temp[out->lenght + 1] = '\r';
+            out->lenght++;
         }
         else
         {
-            out->lenght--;
-            out->text[out->lenght] = '\0';
+            string_temp[out->lenght + 1] = '\0';
         }
+        strcat(out->text, string_temp);
     }
 
     free(string_temp);
