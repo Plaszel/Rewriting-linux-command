@@ -285,17 +285,18 @@ void saveFile(char **file, struct output *out)
 // read file
 void readFile(char **file, char *filename, struct output *out)
 {
-    char *string_temp = malloc(256);
+    char string_temp[256];
     *file = filename;
 
     FILE *f = fopen(*file, "r");
     out->text = malloc(1);
     out->text[0] = '\0';
-    while (fgets(string_temp, 256, f) != NULL)
+
+    while (fgets(string_temp, sizeof(string_temp), f) != NULL)
     {
         out->lenght += strlen(string_temp);
         out->text = realloc(out->text, out->lenght + 1);
-        
+
         if (string_temp[strlen(string_temp)] == '\n' )
         {
             string_temp[out->lenght + 1] = '\r';
@@ -303,12 +304,13 @@ void readFile(char **file, char *filename, struct output *out)
         }
         else
         {
-            string_temp[out->lenght + 1] = '\0';
-        }
+        string_temp[out->lenght + 1] = '\0';
         strcat(out->text, string_temp);
+        }
+        
+        
     }
 
-    free(string_temp);
     fclose(f);
 }
 
