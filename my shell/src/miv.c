@@ -31,7 +31,7 @@ enum Special_keys_enum
     KEY_PG_DOWN = 1008,
 };
 
-int Special_keys[128] = {
+static int Special_keys[128] = {
     ['A'] = KEY_ARROW_UP,
     ['B'] = KEY_ARROW_DOWN,
     ['C'] = KEY_ARROW_RIGHT,
@@ -40,6 +40,17 @@ int Special_keys[128] = {
     ['F'] = KEY_END,
     ['5'] = KEY_PG_UP,
     ['6'] = KEY_PG_DOWN,
+};
+
+enum Error_number
+{
+    ERROR_NO = 0,
+    ERROR_NO_FILE = 100,
+};
+
+static char *Error_string[128] = {
+    [ERROR_NO] = "",
+    [ERROR_NO_FILE] = "File doesnt exist",
 };
 
 int readKey();
@@ -247,11 +258,12 @@ static void clearScreen()
     write(STDOUT_FILENO, "\x1b[1;1H", 6);
 }
 
-static void endProgram(struct output *out)
+static void endProgram(struct output *out,int errcode)
 {
     free(out->text);
     clearScreen();
     DisableRawDataMode();
+    printf("%s",Error_string[errcode]);
     exit(0);
 }
 
@@ -288,27 +300,33 @@ void readFile(char **file, char *filename, struct output *out)
     char string_temp[256];
     *file = filename;
 
+//    if (access(filename,F_OK))
+//      endProgram(out,ERROR_NO_FILE);
+
     FILE *f = fopen(*file, "r");
+    
     out->text = malloc(1);
     out->text[0] = '\0';
 
     while (fgets(string_temp, sizeof(string_temp), f) != NULL)
     {
-        out->lenght += strlen(string_temp);
-        out->text = realloc(out->text, out->lenght + 1);
+        size_t len = strlen(string_temp);
+        int tomove = 1;
+        
+        if (string_temp[len - 1] == '\n' && string_temp[len-2] != '\r')
+        {
+            string_temp[len - 1] = '\r';
+            string_temp[len] = '\n';
+            string_temp[len + 1] = '\0';  
+            tomove++; 
+            len++;
+        }
 
-        if (string_temp[strlen(string_temp)] == '\n' )
-        {
-            string_temp[out->lenght + 1] = '\r';
-            out->lenght++;
-        }
-        else
-        {
-        string_temp[out->lenght + 1] = '\0';
-        strcat(out->text, string_temp);
-        }
-        
-        
+        out->text = realloc(out->text, out->lenght + len + tomove);
+        memcpy(out->text + out->lenght,string_temp,len + tomove);
+        out->lenght += len; 
+
+        out->text[out->lenght] = '\0';
     }
 
     fclose(f);
@@ -322,7 +340,7 @@ void quitTerminal(bool saved, struct output *out, char *file)
 
     if (saved)
     {
-        endProgram(out);
+        endProgram(out,ERROR_NO);
     }
     else
     {
@@ -335,7 +353,7 @@ void quitTerminal(bool saved, struct output *out, char *file)
             saveFile(&file, out);
         }
 
-        endProgram(out);
+        endProgram(out,ERROR_NO);
     }
 }
 
